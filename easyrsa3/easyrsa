@@ -652,25 +652,11 @@ Certificate created at: $crt_out
 build_full() {
 	verify_ca_init
 
-	local i= serial= check_serial=
-	for i in 1 2 3 4 5; do
-		"$EASYRSA_OPENSSL" rand -hex 16 -out "$EASYRSA_PKI/serial"
-		serial="$(cat "$EASYRSA_PKI/serial")"
-		check_serial="$("$EASYRSA_OPENSSL" ca -config "$EASYRSA_SSL_CONF" -status "$serial" 2>&1)"
-		case "$check_serial" in
-			*"not present in db"*) break ;;
-			*) continue ;;
-		esac
-	done
-
 	# pull filename base:
 	[ -n "$2" ] || die "\
 Error: didn't find a file base name as the first argument.
 Run easyrsa without commands for usage and commands."
 	local crt_type="$1" name="$2"
-	local req_out="$EASYRSA_PKI/reqs/$2.req"
-	local key_out="$EASYRSA_PKI/private/$2.key"
-	local crt_out="$EASYRSA_PKI/issued/$2.crt"
 	shift 2
 
 	# function opts support
@@ -683,21 +669,7 @@ Run easyrsa without commands for usage and commands."
 		shift
 	done
 
-	# abort on existing req/key/crt files
-	local err_exists="\
-file already exists. Aborting build to avoid overwriting this file.
-If you wish to continue, please use a different name or remove the file.
-Matching file found at: "
-	[ -f "$req_out" ] && die "Request $err_exists $req_out"
-	[ -f "$key_out" ] && die "Key $err_exists $key_out"
-	[ -f "$crt_out" ] && die "Certificate $err_exists $crt_out"
-
-	# create request
-	EASYRSA_REQ_CN="$name"
-	gen_req "$name" batch $req_opts
-
-	# Sign it
-	sign_req "$crt_type" "$name" batch
+    gen_req "$name" $req_opts && sign_req "$crt_type" "$name" $req_opts
 
 } # => build_full()
 
